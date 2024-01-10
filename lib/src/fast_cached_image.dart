@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+
 import 'models/fast_cache_progress_data.dart';
-import 'package:dio/dio.dart';
 
 class FastCachedImage extends StatefulWidget {
   ///Provide the [url] for the image to display.
@@ -155,8 +157,8 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
   @override
   void initState() {
     _animationController = AnimationController(vsync: this, duration: widget.fadeInDuration);
-    _animation =
-        Tween<double>(begin: widget.fadeInDuration == Duration.zero ? 1 : 0, end: 1).animate(_animationController);
+    _animation = Tween<double>(begin: widget.fadeInDuration == Duration.zero ? 1 : 0, end: 1)
+        .animate(_animationController);
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _loadAsync(widget.url);
@@ -164,12 +166,17 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
     });
 
     _progressData = FastCachedProgressData(
-        progressPercentage: ValueNotifier(0), totalBytes: null, downloadedBytes: 0, isDownloading: false);
+        progressPercentage: ValueNotifier(0),
+        totalBytes: null,
+        downloadedBytes: 0,
+        isDownloading: false);
     super.initState();
   }
 
   void _animationListener(AnimationStatus status) {
-    if (status == AnimationStatus.completed && mounted && widget.fadeInDuration != Duration.zero) setState(() => {});
+    if (status == AnimationStatus.completed && mounted && widget.fadeInDuration != Duration.zero) {
+      setState(() => {});
+    }
   }
 
   @override
@@ -192,9 +199,6 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
         fit: StackFit.passthrough,
         children: [
           if (_animationController.status != AnimationStatus.completed)
-            // (widget.loadingBuilder != null)
-            // ? widget.loadingBuilder!(context)
-            // :
             (widget.loadingBuilder != null)
                 ? ValueListenableBuilder(
                     valueListenable: _progressData.progressPercentage,
@@ -219,7 +223,9 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
                     _logErrors(c);
                     FastCachedImageConfig.deleteCachedImage(imageUrl: widget.url);
                   }
-                  return widget.errorBuilder != null ? widget.errorBuilder!(a, c, v) : const SizedBox();
+                  return widget.errorBuilder != null
+                      ? widget.errorBuilder!(a, c, v)
+                      : const SizedBox();
                 },
                 centerSlice: widget.centerSlice,
                 colorBlendMode: widget.colorBlendMode,
@@ -292,7 +298,8 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
           _progressData.totalBytes = total;
           double.parse((received / total).toStringAsFixed(2));
           // _progress.value = tot != null ? _downloaded / _total! : 0;
-          _progressData.progressPercentage.value = double.parse((received / total).toStringAsFixed(2));
+          _progressData.progressPercentage.value =
+              double.parse((received / total).toStringAsFixed(2));
           widget.loadingBuilder!(context, _progressData);
         }
 
@@ -305,9 +312,12 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
       final Uint8List bytes = response.data;
 
       if (response.statusCode != 200) {
-        String error = NetworkImageLoadException(statusCode: response.statusCode ?? 0, uri: resolved).toString();
+        String error =
+            NetworkImageLoadException(statusCode: response.statusCode ?? 0, uri: resolved)
+                .toString();
         if (mounted) {
-          setState(() => _imageResponse = _ImageResponse(imageData: Uint8List.fromList([]), error: error));
+          setState(() =>
+              _imageResponse = _ImageResponse(imageData: Uint8List.fromList([]), error: error));
         }
         return;
       }
@@ -327,7 +337,8 @@ class _FastCachedImageState extends State<FastCachedImage> with TickerProviderSt
       await FastCachedImageConfig._saveImage(url, bytes);
     } catch (e) {
       if (mounted) {
-        setState(() => _imageResponse = _ImageResponse(imageData: Uint8List.fromList([]), error: e.toString()));
+        setState(() => _imageResponse =
+            _ImageResponse(imageData: Uint8List.fromList([]), error: e.toString()));
       }
     } finally {
       if (!chunkEvents.isClosed) await chunkEvents.close();
@@ -463,7 +474,8 @@ class FastCachedImageConfig {
 
   ///[_checkInit] method ensures the hive db is initialized. Not part of public API
   static void _checkInit() {
-    if ((FastCachedImageConfig._imageKeyBox == null || !FastCachedImageConfig._imageKeyBox!.isOpen) ||
+    if ((FastCachedImageConfig._imageKeyBox == null ||
+            !FastCachedImageConfig._imageKeyBox!.isOpen) ||
         FastCachedImageConfig._imageBox == null ||
         !FastCachedImageConfig._imageBox!.isOpen) {
       throw Exception(_notInitMessage);
@@ -515,7 +527,7 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage> implements Net
   }
 
   @override
-  ImageStreamCompleter loadBuffer(NetworkImage key, DecoderBufferCallback decode) {
+  ImageStreamCompleter loadImage(NetworkImage key, ImageDecoderCallback decode) {
     final StreamController<ImageChunkEvent> chunkEvents = StreamController<ImageChunkEvent>();
 
     return MultiFrameImageStreamCompleter(
@@ -533,7 +545,7 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage> implements Net
   Future<ui.Codec> _loadAsync(
     FastCachedImageProvider key,
     StreamController<ImageChunkEvent> chunkEvents,
-    DecoderBufferCallback decode,
+    ImageDecoderCallback decode,
   ) async {
     try {
       assert(key == this);
